@@ -8,8 +8,7 @@ import cors from "cors";
 // parsing body as json
 const app = express();
 app.use(express.json());
-// 加這一行來允許跨來源請求（預設允許所有來源）
-app.use(cors());
+app.use(cors()); // 加這一行來允許跨來源請求（預設允許所有來源）
 
 app.get("/ping", (req, res) => {
     res.json({ message: "pong" });
