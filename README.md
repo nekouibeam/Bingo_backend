@@ -3,29 +3,35 @@
 
 📁 專案結構
 Bingo_backend/
-├── server.js → 啟動伺服器
-├── package.json → 專案依賴
-├── .gitignore
+├── index.html                ← 測試用前端(忽略即可)
+├── package.json              ← 定義專案名稱、依賴、指令
+├── server.js                 ← 專案進入點，啟動 Express 伺服器
 ├── src/
-│ ├── app.js → Express 設定與路由導入
-│ ├── lib/
-│ │ └── mysql.js → MySQL 連線池
-│ └── controllers/
-│ └── user.js → 用戶註冊/登入邏輯
+│   ├── app.js                ← 建立 Express app，掛載 middleware 和 router
+│   ├── lib/
+│   │   └── mysql.js          ← MySQL 資料庫連線池
+│   └── controllers/
+│       └── user.js           ← 處理 /user/signup 和 /user/login 的邏輯
+├── pnpm-lock.yaml            ← pnpm 自動產生，鎖定依賴版本（要加入 Git）
+├── .gitignore                ← 忽略不必要的檔案（如 node_modules）
+└── README.md                 ← 專案說明文件
+
+----------------------------------------------------------------------------------
 
 🚀 快速開始
 安裝依賴：
-
 pnpm install
+
+----------------------------------------------------------------------------------
 
 設定資料庫連線（在 src/lib/mysql.js）：
 
-const pool = mysql.createPool({
-host: 'localhost',
-user: 'your_user',
-password: 'your_password',
-database: 'your_database'
-});
+const access = {
+  user: "root", // write your username
+  password: "password", // write your password
+  database: "database", // write your database
+};
+const mysqlConnectionPool = mysql2.createPool(access);
 
 ----------------------------------------------------------------------------------
 
@@ -37,6 +43,7 @@ pnpm run dev
 
 ----------------------------------------------------------------------------------
 
+前後端互動範例
 Login 功能的 Request/Response 雙向流程圖：
 
 [Client: login.html]
