@@ -39,7 +39,7 @@ pnpm run dev
 
 Login 功能的 Request/Response 雙向流程圖：
 
-[Client: index.html]
+[Client: login.html]
     │
     │  1. 使用者輸入 Email & Password，點擊 Login
     ▼
@@ -72,7 +72,7 @@ Login 功能的 Request/Response 雙向流程圖：
     │
     │ 10. Express 將 JSON response 傳給前端
     ▲
-[Client: index.html]
+[Client: login.html]
     │
     │ 11. JavaScript 透過 `.then()` 接收到回傳結果
     │ 12. 顯示登入成功訊息或錯誤訊息
