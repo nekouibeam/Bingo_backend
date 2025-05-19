@@ -16,7 +16,7 @@ Bingo_backend/
 │   └── middlewares/
 │       └── auth.js           ← Token 驗證中介層（verifyToken）
 ├── pnpm-lock.yaml            ← pnpm 自動產生，鎖定依賴版本（要加入 Git）
-├── .gitignore                ← 忽略不必要的檔案（如 node_modules）
+├── .gitignore                ← 忽略不必要的檔案（node_modules, 由pnpm安裝）
 └── README.md                 ← 專案說明文件
 
 ----------------------------------------------------------------------------------
