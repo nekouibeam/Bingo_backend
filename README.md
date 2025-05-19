@@ -10,9 +10,11 @@ Bingo_backend/
 │   ├── app.js                ← 建立 Express app，掛載 middleware 和 router
 │   ├── lib/
 │   │   └── mysql.js          ← MySQL 資料庫連線池
-│   └── controllers/
-│       ├── user.js             ← 處理 /user/signup 和 /user/login 的邏輯
-│       └── article.js          ← 處理 article 寫入資料庫
+│   │── controllers/
+│   │   ├── user.js           ← 處理 /user/signup 和 /user/login 的邏輯
+│   │   └── bingo.js          ← Bingo 所有核心邏輯（CRUD、更新整包等）
+│   └── middlewares/
+│       └── auth.js           ← Token 驗證中介層（verifyToken）
 ├── pnpm-lock.yaml            ← pnpm 自動產生，鎖定依賴版本（要加入 Git）
 ├── .gitignore                ← 忽略不必要的檔案（如 node_modules）
 └── README.md                 ← 專案說明文件
