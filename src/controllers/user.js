@@ -45,3 +45,25 @@ export async function login(req, res) {
     res.status(400).json({ error: err.message });
   }
 }
+
+/**
+ * GET /user/info
+ * 取得使用者資訊（目前僅回傳名稱）
+ */
+export async function getUserInfo(req, res) {
+  const userId = req.user.id; // 來自 verifyToken 的 JWT
+
+  const mysql = await mysqlConnectionPool.getConnection();
+  try {
+    const [rows] = await mysql.query(`SELECT Name FROM User WHERE UserId = ?`, [userId]);
+    if (!rows.length) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    res.status(200).json({ name: rows[0].Name });
+  } catch (err) {
+    res.status(500).json({ error: "伺服器錯誤" });
+  } finally {
+    mysql.release();
+  }
+}

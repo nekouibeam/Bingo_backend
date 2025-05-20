@@ -1,6 +1,6 @@
 import express from "express";
-import { signup, login } from "./controllers/user.js";
-import { createFullBingo, getBingoByOwner, updateFullBingo, getBingoById} from "./controllers/bingo.js";
+import { signup, login, getUserInfo } from "./controllers/user.js";
+import { createFullBingo, getBingoByOwner, updateFullBingo, getBingoById, deleteBingo} from "./controllers/bingo.js";
 import { verifyToken } from "./middlewares/auth.js";
 import cors from "cors";
 
@@ -16,5 +16,7 @@ app.get("/bingo", verifyToken, getBingoByOwner);
 app.post("/bingo/full", verifyToken, createFullBingo);
 app.get("/bingo/:id", verifyToken, getBingoById);
 app.put('/bingo/full/:id', verifyToken, updateFullBingo);
+app.delete("/bingo/:id", verifyToken, deleteBingo);
+app.get("/user/info", verifyToken, getUserInfo);
 
 export default app;

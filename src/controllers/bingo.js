@@ -88,13 +88,16 @@ export async function createFullBingo(req, res) {
     for (const entry of articles) {
       const { name, depiction, question, answer, imageBase64 } = entry;
 
-      if (!name || !depiction || !question || !answer || !imageBase64) {
+      if (!name || !depiction || !question || !answer ) {
         throw new Error("有題目資料缺少欄位");
       }
 
       // 轉成圖片 BLOB
-      const base64 = imageBase64.split(",")[1]; // 去除 data:image/png;base64,
-      const imageBuffer = Buffer.from(base64, "base64");
+      let imageBuffer = null;
+      if (imageBase64 && typeof imageBase64 === "string") {
+        const base64Data = imageBase64.includes(',') ? imageBase64.split(',')[1] : imageBase64;
+        imageBuffer = Buffer.from(base64Data, 'base64');
+      }
 
       // 插入 article
       const [articleResult] = await mysql.query(
@@ -233,20 +236,21 @@ export async function updateFullBingo(req, res) {
     for (const entry of articles) {
       const { name, depiction, question, answer, imageBase64 } = entry;
 
-      if (!name || !depiction || !question || !answer || !imageBase64) {
+      if (!name || !depiction || !question || !answer ) {
         throw new Error("有題目資料缺少欄位");
       }
 
-      let imageBuffer;
-      if (imageBase64.startsWith('__EXISTING__:')) {
-        const oldBase64 = imageBase64.replace('__EXISTING__:', '');
-        const base64Data = oldBase64.includes(',') ? oldBase64.split(',')[1] : oldBase64;
-        imageBuffer = Buffer.from(base64Data, 'base64');
-      } else {
-        const base64Data = imageBase64.includes(',') ? imageBase64.split(',')[1] : imageBase64;
-        imageBuffer = Buffer.from(base64Data, 'base64');
+      let imageBuffer = null;
+      if (typeof imageBase64 === "string") {
+        if (imageBase64.startsWith('__EXISTING__:')) {
+          const oldBase64 = imageBase64.replace('__EXISTING__:', '');
+          const base64Data = oldBase64.includes(',') ? oldBase64.split(',')[1] : oldBase64;
+          imageBuffer = Buffer.from(base64Data, 'base64');
+        } else {
+          const base64Data = imageBase64.includes(',') ? imageBase64.split(',')[1] : imageBase64;
+          imageBuffer = Buffer.from(base64Data, 'base64');
+        }
       }
-      
       // 插入 article
       const [articleResult] = await mysql.query(`
         INSERT INTO article (Name, Depiction, Picture, FounderID)
@@ -274,6 +278,58 @@ export async function updateFullBingo(req, res) {
     await mysql.rollback();
     console.error("更新完整 Bingo 錯誤：", err);
     res.status(500).json({ error: "更新 Bingo 發生錯誤" });
+  } finally {
+    mysql.release();
+  }
+}
+
+/**
+ * DELETE /bingo/:id
+ * 刪除 Bingo（連帶刪除所有相關的 article 和 riddle）
+ */
+export async function deleteBingo(req, res) {
+  const bingoId = req.params.id;
+  const tokenUserId = req.user?.id;
+
+  if (!bingoId || !tokenUserId) {
+    return res.status(400).json({ error: "缺少參數或未登入" });
+  }
+
+  const mysql = await mysqlConnectionPool.getConnection();
+  try {
+    await mysql.beginTransaction();
+
+    // 檢查是否為擁有者
+    const [check] = await mysql.query(`SELECT Owner FROM bingo WHERE BingoId = ?`, [bingoId]);
+    if (check.length === 0) {
+      return res.status(404).json({ error: "Bingo 不存在" });
+    }
+    if (check[0].Owner !== tokenUserId) {
+      return res.status(403).json({ error: "無權限刪除此 Bingo" });
+    }
+
+    // 刪除順序：
+    // ✅ connection → ✅ riddle → ✅ article → ✅ bingo
+    const [articleRows] = await mysql.query(`SELECT ArticleId FROM article WHERE ArticleId IN (
+      SELECT ArticleId FROM connection WHERE BingoId = ?
+    )`, [bingoId]);
+    const articleIds = articleRows.map(row => row.ArticleId);
+    
+    await mysql.query(`DELETE FROM connection WHERE BingoId = ?`, [bingoId]);
+
+    if (articleIds.length > 0) {
+      await mysql.query(`DELETE FROM riddle WHERE ArticleId IN (?)`, [articleIds]);
+      await mysql.query(`DELETE FROM article WHERE ArticleId IN (?)`, [articleIds]);
+    }
+
+    await mysql.query(`DELETE FROM bingo WHERE BingoId = ?`, [bingoId]);
+
+    await mysql.commit();
+    res.status(200).json({ message: "Bingo 已成功刪除" });
+  } catch (err) {
+    await mysql.rollback();
+    console.error("❌ 刪除 Bingo 發生錯誤：", err);
+    res.status(500).json({ error: "刪除失敗" });
   } finally {
     mysql.release();
   }
