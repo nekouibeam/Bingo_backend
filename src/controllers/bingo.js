@@ -382,3 +382,58 @@ export async function getAllBingos(req, res) {
     mysql.release();
   }
 }
+
+/**
+ * GET /bingo/play/:id
+ * 取得 Bingo 給玩家遊玩用（含 article + riddle）
+ */
+export async function getPlayableBingo(req, res) {
+  const bingoId = req.params.id;
+
+  const mysql = await mysqlConnectionPool.getConnection();
+  try {
+    const [[bingo]] = await mysql.query(`
+      SELECT BingoId, BingoName, Region, CreateTime
+      FROM bingo
+      WHERE BingoId = ?
+    `, [bingoId]);
+
+    if (!bingo) {
+      return res.status(404).json({ error: "找不到 Bingo" });
+    }
+
+    // 取得該 Bingo 對應的 9 個 article + riddle
+    const [rows] = await mysql.query(`
+      SELECT a.ArticleId, a.Name, a.Depiction, a.Picture, r.Question
+      FROM connection c
+      JOIN article a ON c.ArticleId = a.ArticleId
+      JOIN riddle r ON r.ArticleId = a.ArticleId
+      WHERE c.BingoId = ?
+      ORDER BY c.ArticleId ASC
+    `, [bingoId]);
+
+    const articles = rows.map(row => ({
+      id: row.ArticleId,
+      name: row.Name,
+      depiction: row.Depiction,
+      question: row.Question,
+      imageBase64: row.Picture
+        ? `data:image/jpeg;base64,${row.Picture.toString("base64")}`
+        : null
+    }));
+
+    res.status(200).json({
+      id: bingo.BingoId,
+      title: bingo.BingoName,
+      region: bingo.Region,
+      createdAt: bingo.CreateTime,
+      articles
+    });
+
+  } catch (err) {
+    console.error("取得可遊玩 Bingo 失敗：", err);
+    res.status(500).json({ error: "伺服器錯誤" });
+  } finally {
+    mysql.release();
+  }
+}
