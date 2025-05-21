@@ -334,3 +334,51 @@ export async function deleteBingo(req, res) {
     mysql.release();
   }
 }
+
+/**
+ * GET /bingo/all
+ * 取得所有公開 Bingo（所有皆公開）
+ */
+export async function getAllBingos(req, res) {
+  const mysql = await mysqlConnectionPool.getConnection();
+  try {
+    const [bingos] = await mysql.query(`
+      SELECT b.BingoId, b.BingoName, b.CreateTime
+      FROM bingo b
+      ORDER BY b.CreateTime DESC
+    `);
+
+    const result = [];
+
+    for (const bingo of bingos) {
+      const [connections] = await mysql.query(`
+        SELECT a.Picture
+        FROM connection c
+        JOIN article a ON c.ArticleId = a.ArticleId
+        WHERE c.BingoId = ?
+        LIMIT 9
+      `, [bingo.BingoId]);
+
+      const images = connections.map(row => {
+        if (!row.Picture) return null;
+        const base64 = row.Picture.toString("base64");
+        return `data:image/jpeg;base64,${base64}`;
+      });
+
+      result.push({
+        id: bingo.BingoId,
+        title: bingo.BingoName,
+        createdAt: bingo.CreateTime,
+        players: Math.floor(Math.random() * 500), // 🔧 模擬玩家人數，後續可接 log 或 play record
+        images
+      });
+    }
+
+    res.status(200).json(result);
+  } catch (err) {
+    console.error("取得公開 Bingo 失敗：", err);
+    res.status(500).json({ error: "伺服器錯誤，無法取得 Bingo" });
+  } finally {
+    mysql.release();
+  }
+}

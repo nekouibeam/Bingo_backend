@@ -1,6 +1,6 @@
 import express from "express";
 import { signup, login, getUserInfo } from "./controllers/user.js";
-import { createFullBingo, getBingoByOwner, updateFullBingo, getBingoById, deleteBingo} from "./controllers/bingo.js";
+import { createFullBingo, getBingoByOwner, updateFullBingo, getBingoById, deleteBingo, getAllBingos} from "./controllers/bingo.js";
 import { verifyToken } from "./middlewares/auth.js";
 import cors from "cors";
 
@@ -12,11 +12,15 @@ app.use(express.urlencoded({ extended: true, limit: '20mb' }));
 
 app.post("/user/signup", signup);
 app.post("/user/login", login);
-app.get("/bingo", verifyToken, getBingoByOwner);
-app.post("/bingo/full", verifyToken, createFullBingo);
-app.get("/bingo/:id", verifyToken, getBingoById);
-app.put('/bingo/full/:id', verifyToken, updateFullBingo);
-app.delete("/bingo/:id", verifyToken, deleteBingo);
 app.get("/user/info", verifyToken, getUserInfo);
+
+app.get("/bingo", verifyToken, getBingoByOwner);
+app.get("/bingo/all", verifyToken, getAllBingos); // 固定路徑 
+
+app.get("/bingo/:id", verifyToken, getBingoById); // 動態路由 
+app.delete("/bingo/:id", verifyToken, deleteBingo); // 動態路由 
+
+app.post("/bingo/full", verifyToken, createFullBingo);
+app.put('/bingo/full/:id', verifyToken, updateFullBingo);
 
 export default app;
