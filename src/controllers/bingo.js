@@ -196,7 +196,7 @@ export async function getBingoById(req, res) {
 
 /**
  * PUT /bingo/full/:id
- * 更新完整 Bingo（含 9 個 article + riddle + connection）
+ * 更新完整 Bingo（含 9 個 article + riddle + connection）& 刪除舊records
  */
 export async function updateFullBingo(req, res) {
   const bingoId = req.params.id;
@@ -224,13 +224,14 @@ export async function updateFullBingo(req, res) {
 
     const oldArticleIds = oldConnections.map(row => row.ArticleId);
     
-    // 3️⃣ 刪除舊 connection → riddle → article
-    if (oldArticleIds.length > 0) {
+    // 3️⃣ 刪除舊 connection → record → riddle → article  
+    if (oldArticleIds.length > 0) {      
       await mysql.query(`DELETE FROM connection WHERE BingoId = ?`, [bingoId]);
+      await mysql.query(`DELETE FROM record WHERE GameId = ?`, [bingoId]);
       await mysql.query(`DELETE FROM riddle WHERE ArticleId IN (?)`, [oldArticleIds]);
       await mysql.query(`DELETE FROM article WHERE ArticleId IN (?)`, [oldArticleIds]);
     }
-
+  
     // 4️⃣ 插入新 articles + riddle + connection
     const newArticleIds = [];
 
@@ -286,7 +287,7 @@ export async function updateFullBingo(req, res) {
 
 /**
  * DELETE /bingo/:id
- * 刪除 Bingo（連帶刪除所有相關的 article 和 riddle）
+ * 刪除 Bingo（連帶刪除所有相關的 article + riddle + record + comment）
  */
 export async function deleteBingo(req, res) {
   const bingoId = req.params.id;
@@ -319,10 +320,13 @@ export async function deleteBingo(req, res) {
     await mysql.query(`DELETE FROM connection WHERE BingoId = ?`, [bingoId]);
 
     if (articleIds.length > 0) {
+      await mysql.query(`DELETE FROM record WHERE ArticleId IN (?)`, [articleIds]);
       await mysql.query(`DELETE FROM riddle WHERE ArticleId IN (?)`, [articleIds]);
       await mysql.query(`DELETE FROM article WHERE ArticleId IN (?)`, [articleIds]);
     }
 
+    await mysql.query(`DELETE FROM record WHERE GameId = ?`, [bingoId]);
+    await mysql.query(`DELETE FROM comment WHERE GameId = ?`, [bingoId]);
     await mysql.query(`DELETE FROM bingo WHERE BingoId = ?`, [bingoId]);
 
     await mysql.commit();
@@ -407,7 +411,7 @@ export async function getPlayableBingo(req, res) {
 
     // 取得該 Bingo 對應的 9 個 article + riddle
     const [rows] = await mysql.query(`
-      SELECT a.ArticleId, a.Name, a.Depiction, a.Picture, r.Question
+      SELECT a.ArticleId, a.Name, a.Depiction, a.Picture, r.Question, r.Answer
       FROM connection c
       JOIN article a ON c.ArticleId = a.ArticleId
       JOIN riddle r ON r.ArticleId = a.ArticleId
@@ -420,6 +424,7 @@ export async function getPlayableBingo(req, res) {
       name: row.Name,
       depiction: row.Depiction,
       question: row.Question,
+      answer: row.Answer,
       imageBase64: row.Picture
         ? `data:image/jpeg;base64,${row.Picture.toString("base64")}`
         : null
