@@ -13,6 +13,24 @@ export async function signup(req, res) {
   try {
     await mysql.beginTransaction();
 
+    // 檢查是否已存在相同的 email
+    const [existingUser] = await mysql.query(
+      `SELECT UserId FROM User WHERE Email = ?`,
+      [email]
+    );
+    if (existingUser.length > 0) {
+      throw new Error("User email has been used!");
+    }
+
+    // 檢查是否已存在相同的 name
+    const [existingName] = await mysql.query(
+      `SELECT UserId FROM User WHERE Name = ?`,
+      [name]
+    );
+    if (existingName.length > 0) {
+      throw new Error("User name has been used!");
+    }
+
     // 插入 User
     const [userResult] = await mysql.query(
       `INSERT INTO User (Name, Email, Password) VALUES (?, ?, ?)`,
@@ -37,8 +55,8 @@ export async function signup(req, res) {
     res.status(201).json({ status: "created" });
   } catch(error) {
       await mysql.rollback();
-      console.error("Error during signup:", error);
-      res.status(400).json({ error: "User account has been used!" });
+      console.error(error);
+      res.status(400).json({ error: error.message });
   } finally {
       if (mysql) mysql.release();
   }
