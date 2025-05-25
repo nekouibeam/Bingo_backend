@@ -63,7 +63,7 @@ export async function getBingoByOwner(req, res) {
  * 建立完整 Bingo（含 9 個 article + riddle + connection）
  */
 export async function createFullBingo(req, res) {
-  const { owner, title, region, reward, passlimit, articles } = req.body;
+  const { owner, title, region, reward, passlimit, hashtag, articles } = req.body;
 
   if (!owner || !title || !Array.isArray(articles) || articles.length < 9) {
     return res.status(400).json({ error: "請提供至少 9 筆題目資料" });
@@ -76,9 +76,9 @@ export async function createFullBingo(req, res) {
 
     // 1️⃣ 建立 Bingo
     const [bingoResult] = await mysql.query(
-      `INSERT INTO bingo (BingoName, Size, Owner, Reward, Region, Passlimit)
+      `INSERT INTO bingo (BingoName, Size, Owner, Reward, Region, Passlimit, Hashtag)
        VALUES (?, ?, ?, ?, ?, ?)`,
-      [title, articles.length, owner, reward || null, region || null, passlimit || null]
+      [title, articles.length, owner, reward || null, region || null, passlimit || null , hashtag || null]
     );
 
     const bingoId = bingoResult.insertId;
@@ -144,7 +144,7 @@ export async function getBingoById(req, res) {
   try {
     // 1️⃣ 查 bingo 本體
     const [bingoRows] = await mysql.query(`
-      SELECT BingoId, BingoName, Size, Owner, Reward, Region, Passlimit, CreateTime
+      SELECT BingoId, BingoName, Size, Owner, Reward, Region, Passlimit, CreateTime, Hashtag
       FROM bingo WHERE BingoId = ?
     `, [bingoId]);
 
@@ -180,6 +180,7 @@ export async function getBingoById(req, res) {
         reward: bingo.Reward,
         region: bingo.Region,
         passlimit: bingo.Passlimit,
+        hashtag: bingo.Hashtag || null,
         createdAt: bingo.CreateTime
       },
       articles
@@ -199,7 +200,7 @@ export async function getBingoById(req, res) {
  */
 export async function updateFullBingo(req, res) {
   const bingoId = req.params.id;
-  const { owner, title, region, reward, passlimit, articles } = req.body;
+  const { owner, title, region, reward, passlimit, articles, hashtag } = req.body;
 
   if (!bingoId || !owner || !title || !Array.isArray(articles) || articles.length < 9) {
     return res.status(400).json({ error: "參數不完整或格式錯誤" });
@@ -212,9 +213,9 @@ export async function updateFullBingo(req, res) {
     // 1️⃣ 更新 bingo 主資訊
     await mysql.query(`
       UPDATE bingo
-      SET BingoName = ?, Reward = ?, Region = ?, Passlimit = ?
+      SET BingoName = ?, Reward = ?, Region = ?, Passlimit = ?, Hashtag = ?
       WHERE BingoId = ? AND Owner = ?
-    `, [title, reward, region, passlimit, bingoId, owner]);
+    `, [title, reward, region, passlimit, hashtag, bingoId, owner]);
 
     // 2️⃣ 查出舊 Article ID（從 connection 拿）
     const [oldConnections] = await mysql.query(`
@@ -343,7 +344,7 @@ export async function getAllBingos(req, res) {
   const mysql = await mysqlConnectionPool.getConnection();
   try {
     const [bingos] = await mysql.query(`
-      SELECT b.BingoId, b.BingoName, b.CreateTime
+      SELECT b.BingoId, b.BingoName, b.CreateTime, b.Hashtag
       FROM bingo b
       ORDER BY b.CreateTime DESC
     `);
@@ -369,6 +370,7 @@ export async function getAllBingos(req, res) {
         id: bingo.BingoId,
         title: bingo.BingoName,
         createdAt: bingo.CreateTime,
+        hashtag: bingo.Hashtag || null,
         players: Math.floor(Math.random() * 500), // 🔧 模擬玩家人數，後續可接 log 或 play record
         images
       });
