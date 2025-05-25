@@ -11,13 +11,36 @@ export async function signup(req, res) {
   const { name, email, password } = req.body;
   const mysql = await mysqlConnectionPool.getConnection();
   try {
-    await mysql.query(
+    await mysql.beginTransaction();
+
+    // 插入 User
+    const [userResult] = await mysql.query(
       `INSERT INTO User (Name, Email, Password) VALUES (?, ?, ?)`,
       [name, email, password]
     );
+    
+    const userId = userResult.insertId;
+    const contact = 'Email: ' + email; // 假設聯絡方式為 email
+
+    // 插入 Creator
+    await mysql.query(
+      `INSERT INTO creator (CreatorId, Contact_Details) VALUES (?, ?)`,
+      [userId, contact] // 使用剛插入的 UserId
+    );
+    // 插入 Player
+    await mysql.query(
+      `INSERT INTO player (PlayerId) VALUES (?)`,
+      [userId]
+    );
+
+    await mysql.commit();
     res.status(201).json({ status: "created" });
-  } catch {
-    res.status(400).json({ error: "User account has been used!" });
+  } catch(error) {
+      await mysql.rollback();
+      console.error("Error during signup:", error);
+      res.status(400).json({ error: "User account has been used!" });
+  } finally {
+      if (mysql) mysql.release();
   }
 }
 
