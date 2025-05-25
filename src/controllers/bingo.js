@@ -344,7 +344,7 @@ export async function getAllBingos(req, res) {
   const mysql = await mysqlConnectionPool.getConnection();
   try {
     const [bingos] = await mysql.query(`
-      SELECT b.BingoId, b.BingoName, b.CreateTime, b.Hashtag
+      SELECT b.BingoId, b.BingoName, b.CreateTime, b.region, b.Hashtag
       FROM bingo b
       ORDER BY b.CreateTime DESC
     `);
@@ -370,6 +370,7 @@ export async function getAllBingos(req, res) {
         id: bingo.BingoId,
         title: bingo.BingoName,
         createdAt: bingo.CreateTime,
+        region: bingo.region || null,
         hashtag: bingo.Hashtag || null,
         players: Math.floor(Math.random() * 500), // 🔧 模擬玩家人數，後續可接 log 或 play record
         images
@@ -395,7 +396,7 @@ export async function getPlayableBingo(req, res) {
   const mysql = await mysqlConnectionPool.getConnection();
   try {
     const [[bingo]] = await mysql.query(`
-      SELECT BingoId, BingoName, Region, CreateTime
+      SELECT BingoId, BingoName, Region, Passlimit
       FROM bingo
       WHERE BingoId = ?
     `, [bingoId]);
@@ -427,14 +428,105 @@ export async function getPlayableBingo(req, res) {
     res.status(200).json({
       id: bingo.BingoId,
       title: bingo.BingoName,
-      region: bingo.Region,
-      createdAt: bingo.CreateTime,
+      region: bingo.Region || null,
+      passlimit: bingo.Passlimit || null,
       articles
     });
 
   } catch (err) {
     console.error("取得可遊玩 Bingo 失敗：", err);
     res.status(500).json({ error: "伺服器錯誤" });
+  } finally {
+    mysql.release();
+  }
+}
+
+/**
+ * GET /comments/:bingoId
+ * 取得指定 Bingo 的評論列表
+ */
+export async function getComments(req, res) {
+  const bingoId = req.params.bingoId;
+
+  if (!bingoId) {
+    return res.status(400).json({ error: "缺少 Bingo ID" });
+  }
+
+  const mysql = await mysqlConnectionPool.getConnection();
+  try {
+    const [comments] = await mysql.query(`
+      SELECT c.CommentId AS id, c.Message, c.Commenter AS userId, u.Name AS username, c.GameId AS bingoId, c.CreatedAt AS createdAt
+      FROM comment c
+      LEFT JOIN user u ON c.Commenter = u.UserId
+      WHERE c.GameId = ? 
+      ORDER BY c.CommentId DESC
+    `, [bingoId]);
+
+    res.status(200).json(comments);
+  } catch (err) {
+    console.error("取得 Bingo 評論失敗：", err);
+    res.status(500).json({ error: "伺服器錯誤，無法取得評論" });
+  } finally {
+    mysql.release();
+  }
+}
+
+/**
+ * POST /comment
+ * 新增評論到指定 Bingo
+ */
+export async function addComment(req, res) {
+  const userId = req.user.id;
+  const { bingoId, message } = req.body;
+  
+  if (!bingoId || !message || !userId) {
+    return res.status(400).json({ error: "缺少必要參數" });
+  }
+
+  const mysql = await mysqlConnectionPool.getConnection();
+  try {
+    await mysql.query(`
+      INSERT INTO comment (GameId, Commenter, Message)
+      VALUES (?, ?, ?)
+    `, [bingoId, userId, message]);
+
+    res.status(201).json({ message: "評論已新增" });
+  } catch (err) {
+    console.error("新增評論失敗：", err);
+    res.status(500).json({ error: "伺服器錯誤，無法新增評論" });
+  } finally {
+    mysql.release();
+  }
+}
+
+/**
+ * DELETE /comment/:id
+ * 刪除指定評論
+ */
+export async function deleteComment(req, res) {
+  const userId = req.user.id;
+  const commentId = req.params.id;
+
+  if (!commentId || !userId) {
+    return res.status(400).json({ error: "缺少必要參數" });
+  }
+
+  const mysql = await mysqlConnectionPool.getConnection();
+  try {
+    // 確認評論是否存在且屬於該使用者
+    const [check] = await mysql.query(`
+      SELECT CommentID FROM comment WHERE CommentID = ? AND Commenter = ?
+    `, [commentId, userId]);
+
+    if (check.length === 0) {
+      return res.status(404).json({ error: "評論不存在或無權限刪除" });
+    }
+
+    await mysql.query(`DELETE FROM comment WHERE CommentID = ?`, [commentId]);
+    res.status(200).json({ message: "評論已刪除" });
+  } catch (err) {
+    console.error("刪除評論失敗：", err);
+    res.status(500).json({ error: "伺服器錯誤，無法刪除評論" });
   } finally {
     mysql.release();
   }
