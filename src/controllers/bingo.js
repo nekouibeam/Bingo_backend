@@ -77,7 +77,7 @@ export async function createFullBingo(req, res) {
     // 1️⃣ 建立 Bingo
     const [bingoResult] = await mysql.query(
       `INSERT INTO bingo (BingoName, Size, Owner, Reward, Region, Passlimit, Hashtag)
-       VALUES (?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [title, articles.length, owner, reward || null, region || null, passlimit || null , hashtag || null]
     );
 
