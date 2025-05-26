@@ -3,6 +3,7 @@ import { signup, login, getUserInfo } from "./controllers/user.js";
 import { createFullBingo, getBingoByOwner, updateFullBingo, getBingoById, deleteBingo, getAllBingos, getPlayableBingo, 
 addComment, getComments, deleteComment } from "./controllers/bingo.js";
 import { savePlayerRecord, getPlayerRecords } from "./controllers/record.js";
+import { rewardPlayer } from './controllers/reward.js';
 import { verifyToken } from "./middlewares/auth.js";
 import cors from "cors";
 
@@ -33,5 +34,7 @@ app.delete('/comments/:id', verifyToken, deleteComment);
 
 app.post("/record", verifyToken, savePlayerRecord);
 app.get("/record/:bingoId", verifyToken, getPlayerRecords);
+
+app.post('/reward', verifyToken, rewardPlayer);
 
 export default app;

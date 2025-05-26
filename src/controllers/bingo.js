@@ -400,7 +400,7 @@ export async function getPlayableBingo(req, res) {
   const mysql = await mysqlConnectionPool.getConnection();
   try {
     const [[bingo]] = await mysql.query(`
-      SELECT BingoId, BingoName, Region, Passlimit
+      SELECT BingoId, BingoName, Region, Passlimit, Reward
       FROM bingo
       WHERE BingoId = ?
     `, [bingoId]);
@@ -435,6 +435,7 @@ export async function getPlayableBingo(req, res) {
       title: bingo.BingoName,
       region: bingo.Region || null,
       passlimit: bingo.Passlimit || null,
+      reward: bingo.Reward,
       articles
     });
 
