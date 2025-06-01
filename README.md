@@ -12,6 +12,8 @@ Bingo_backend/
 │   │   └── mysql.js          ← MySQL 資料庫連線池
 │   │── controllers/
 │   │   ├── user.js           ← 處理 /user/signup 和 /user/login 的邏輯
+|   |   ├── record.js         ← 處理 record 紀錄存取 的邏輯
+|   |   ├── reward.js         ← 處理 reward 發放扣除 的邏輯
 │   │   └── bingo.js          ← Bingo 所有核心邏輯（CRUD、更新整包等）
 │   └── middlewares/
 │       └── auth.js           ← Token 驗證中介層（verifyToken）
