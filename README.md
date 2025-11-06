@@ -46,6 +46,11 @@ pnpm run dev
 
 伺服器將在 http://localhost:3000 運行。
 
+啟動mysql：
+Start-Service MySQL80
+mysql -u root -p
+輸入password
+
 ----------------------------------------------------------------------------------
 
 前後端互動範例
